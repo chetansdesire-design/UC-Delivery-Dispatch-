@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>URBAN CASA | Dispatch Dashboard</title>
     <style>
-        :root { --header-footer: #000000; --accent: #2563eb; --wa-green: #25D366; --bg: #f8fafc; --danger: #be123c; }
+        :root { --header-footer: #000000; --accent: #2563eb; --wa-green: #25D366; --bg: #f8fafc; --danger: #be123c; --warning: #f59e0b; }
         body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; padding: 0; color: #1e293b; display: flex; flex-direction: column; min-height: 100vh; }
         header { background: var(--header-footer); padding: 25px 20px; text-align: center; color: white; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         header h1 { margin: 0; font-size: 1.4rem; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; }
@@ -18,7 +18,7 @@
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         button { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-bottom: 10px; }
         .btn-wa { background: var(--wa-green); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-wa:disabled { background: #94a3b8; cursor: not-allowed; }
+        .btn-wa.readonly-mode { background: var(--warning); color: black; }
         .btn-search { background: var(--accent); color: white; }
         .btn-danger { background: white; color: var(--danger); border: 1px solid var(--danger); font-size: 0.8rem; padding: 8px; }
         .stats { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; font-weight: bold; background: #f1f5f9; padding: 10px; border-radius: 8px; }
@@ -28,49 +28,27 @@
 
 <header>
     <h1>URBAN CASA</h1>
-    <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 5px;">DISPATCH DASHBOARD v4.1</div>
+    <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 5px;">DISPATCH DASHBOARD v6.5</div>
 </header>
 
 <div class="container">
     <div class="stats">
         <span>📦 MONTH TOTAL: <span id="count">0</span></span>
-        <span>QC: SUMAN</span>
+        <span id="mode-status" style="color: var(--accent);">MODE: NEW ENTRY</span>
     </div>
 
     <div class="card">
         <form id="deliveryForm">
             <div class="row">
-                <div class="form-group">
-                    <label>Dispatch Date</label>
-                    <input type="date" id="dDate" required>
-                </div>
-                <div class="form-group">
-                    <label>Bill Date</label>
-                    <input type="date" id="bDate" required>
-                </div>
+                <div class="form-group"><label>Dispatch Date</label><input type="date" id="dDate"></div>
+                <div class="form-group"><label>Bill Date</label><input type="date" id="bDate"></div>
             </div>
-
             <div class="row">
-                <div class="form-group">
-                    <label>Bill Number</label>
-                    <input type="text" id="bNo" placeholder="Loading...">
-                </div>
-                <div class="form-group">
-                    <label>Quantity (Pkgs)</label>
-                    <input type="number" id="qty" placeholder="0" required>
-                </div>
+                <div class="form-group"><label>Bill Number</label><input type="text" id="bNo" placeholder="e.g. UC-1001"></div>
+                <div class="form-group"><label>Quantity (Pkgs)</label><input type="number" id="qty" placeholder="0"></div>
             </div>
-
-            <div class="form-group">
-                <label>Customer Name</label>
-                <input type="text" id="cName" placeholder="Enter name" required>
-            </div>
-
-            <div class="form-group">
-                <label>Area / Route</label>
-                <input type="text" id="area" placeholder="e.g. Jubilee Hills" required>
-            </div>
-
+            <div class="form-group"><label>Customer Name</label><input type="text" id="cName" placeholder="Enter name"></div>
+            <div class="form-group"><label>Area / Route</label><input type="text" id="area" placeholder="Enter location"></div>
             <div class="row">
                 <div class="form-group">
                     <label>Payment Due?</label>
@@ -79,52 +57,75 @@
                         <option value="Yes">Yes (Due)</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Amount (₹)</label>
-                    <input type="number" id="amt" value="0" disabled>
-                </div>
+                <div class="form-group"><label>Amount (₹)</label><input type="number" id="amt" value="0" disabled></div>
             </div>
+            <div class="form-group"><label>QC Checked By</label><input type="text" id="qcCheckedBy" value="Suman"></div>
 
-            <input type="hidden" id="qcCheckedBy" value="Suman">
-
-            <button type="button" class="btn-wa" onclick="saveData()">
+            <button type="button" class="btn-wa" id="mainBtn" onclick="handleAction()">
                 SAVE & WHATSAPP EXPORT
             </button>
+            <button type="button" style="background: #e2e8f0; color: #475569; font-size: 0.8rem; padding: 10px;" onclick="resetForm()">NEW ENTRY / CLEAR</button>
         </form>
     </div>
 
     <div class="card" style="background: transparent; box-shadow: none; padding: 0;">
-        <button class="btn-search" onclick="searchBill()">🔍 SEARCH BILL</button>
-        <button class="btn-danger" onclick="resetMonthlyData()">⚠️ RESET MONTHLY DATA</button>
+        <button class="btn-search" onclick="searchBill()">🔍 SEARCH DATABASE</button>
+        <button class="btn-danger" onclick="resetMonthlyData()">⚠️ RESET LOCAL HISTORY</button>
     </div>
 </div>
 
 <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6_8nr3Ghe661fTCQOxy501LoJI470TcqAa46P59eM8hmxnqXxP4Rdzq3OU67T5Ur9eQ/exec';
+    const FIREBASE_URL = 'https://dispatch-58eb9-default-rtdb.firebaseio.com/dispatches';
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbw6_8nr3Ghe661fTCQOxy501LoJI470TcqAa46P59eM8hmxnqXxP4Rdzq3OU67T5Ur9eQ/exec';
+    
+    let isSearchMode = false;
 
     function init() {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('dDate').value = today;
         document.getElementById('bDate').value = today;
         
-        const lastBill = localStorage.getItem('lastBill') || 1001;
-        document.getElementById('bNo').value = `UC-${lastBill}`;
-        
+        // ALL INPUT FIELDS SET TO BLANK
+        document.getElementById('bNo').value = "";
+        document.getElementById('qty').value = "";
+        document.getElementById('cName').value = "";
+        document.getElementById('area').value = "";
+        document.getElementById('amt').value = "0";
+        document.getElementById('due').value = "No";
+        document.getElementById('amt').disabled = true;
+        document.getElementById('qcCheckedBy').value = "Suman";
+
         const ledger = JSON.parse(localStorage.getItem('monthlyLedger')) || [];
         document.getElementById('count').innerText = ledger.length;
+        setMode(false);
+    }
+
+    function setMode(searchActive) {
+        isSearchMode = searchActive;
+        const btn = document.getElementById('mainBtn');
+        const status = document.getElementById('mode-status');
+        if(isSearchMode) {
+            btn.innerHTML = "📲 WHATSAPP SHARE ONLY";
+            btn.classList.add('readonly-mode');
+            status.innerHTML = "MODE: VIEW/SHARE";
+            status.style.color = "var(--warning)";
+        } else {
+            btn.innerHTML = "SAVE & WHATSAPP EXPORT";
+            btn.classList.remove('readonly-mode');
+            status.innerHTML = "MODE: NEW ENTRY";
+            status.style.color = "var(--accent)";
+        }
+    }
+
+    function resetForm() {
+        init();
     }
 
     function toggleAmt() {
         const due = document.getElementById('due').value;
         const amtInput = document.getElementById('amt');
-        if(due === 'Yes') {
-            amtInput.disabled = false;
-            amtInput.value = "";
-            amtInput.focus();
-        } else {
-            amtInput.disabled = true;
-            amtInput.value = "0";
-        }
+        amtInput.disabled = (due === 'No');
+        if(due === 'No') amtInput.value = "0";
     }
 
     function formatDateDMY(dateStr) {
@@ -133,81 +134,98 @@
         return `${d}-${m}-${y}`;
     }
 
-    function saveData() {
-        const saveBtn = document.querySelector('.btn-wa');
-        const originalText = saveBtn.innerHTML;
-
+    async function handleAction() {
         const entry = {
             dispatch: document.getElementById('dDate').value,
             billDate: document.getElementById('bDate').value,
-            billNo: document.getElementById('bNo').value,
-            name: document.getElementById('cName').value.toUpperCase() || "N/A",
-            qty: document.getElementById('qty').value || 0,
-            area: document.getElementById('area').value.toUpperCase() || "N/A",
+            billNo: document.getElementById('bNo').value.toUpperCase(),
+            name: document.getElementById('cName').value.toUpperCase(),
+            qty: document.getElementById('qty').value,
+            area: document.getElementById('area').value.toUpperCase(),
             due: document.getElementById('due').value,
-            amt: document.getElementById('amt').value || 0,
-            staff: "Suman" // Keeping key as 'staff' for Google Script compatibility, but labeled as QC Checked By
+            amt: document.getElementById('amt').value,
+            staff: document.getElementById('qcCheckedBy').value
         };
 
-        if(!entry.name || entry.qty == 0) return alert("Please fill Customer and Quantity");
+        if(!entry.billNo || !entry.name || !entry.qty) return alert("Please fill Bill No, Customer and Quantity");
 
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = "⌛ SYNCING TO CLOUD...";
-
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            cache: 'no-cache',
-            body: JSON.stringify(entry)
-        })
-        .then(() => {
-            let ledger = JSON.parse(localStorage.getItem('monthlyLedger')) || [];
-            ledger.push(entry);
-            localStorage.setItem('monthlyLedger', JSON.stringify(ledger));
+        if (!isSearchMode) {
+            const btn = document.getElementById('mainBtn');
+            btn.disabled = true;
+            btn.innerHTML = "⌛ SAVING TO CLOUD...";
             
-            const nextNum = (parseInt(entry.billNo.split('-')[1]) || 1000) + 1;
-            localStorage.setItem('lastBill', nextNum);
+            try {
+                await Promise.all([
+                    fetch(`${FIREBASE_URL}/${entry.billNo}.json`, { method: 'PATCH', body: JSON.stringify(entry) }),
+                    fetch(GOOGLE_SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(entry) })
+                ]);
+                
+                let ledger = JSON.parse(localStorage.getItem('monthlyLedger')) || [];
+                ledger.push(entry);
+                localStorage.setItem('monthlyLedger', JSON.stringify(ledger));
+            } catch (e) {
+                alert("Cloud save failed. Proceeding to WhatsApp.");
+            }
+        }
 
-            // UPDATED: WhatsApp Message formatting
-            const waMsg = `*URBAN CASA DISPATCH*%0A--------------------------%0A*Date:* ${formatDateDMY(entry.billDate)}%0A*Bill No:* ${entry.billNo}%0A*Customer:* ${entry.name}%0A*Area:* ${entry.area}%0A*Qty:* ${entry.qty} Pkgs%0A*Due:* ${entry.due === 'Yes' ? '₹' + entry.amt : 'No'}%0A*QC Checked By:* ${entry.staff}%0A--------------------------%0A🚚 _Status: Dispatched_`;
-            
-            window.open(`https://wa.me/?text=${waMsg}`, '_blank');
-
-            document.getElementById('deliveryForm').reset();
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalText;
-            init();
-        })
-        .catch(err => {
-            alert("Sync Error. Data saved locally only.");
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalText;
-        });
+        const waMsg = `*URBAN CASA DISPATCH*%0A--------------------------%0A*Date:* ${formatDateDMY(entry.billDate)}%0A*Bill No:* ${entry.billNo}%0A*Customer:* ${entry.name}%0A*Area:* ${entry.area}%0A*Qty:* ${entry.qty} Pkgs%0A*Due:* ${entry.due === 'Yes' ? '₹' + entry.amt : 'No'}%0A*QC Checked By:* ${entry.staff}%0A--------------------------%0A🚚 _Status: Dispatched_`;
+        window.open(`https://wa.me/?text=${waMsg}`, '_blank');
+        
+        if(!isSearchMode) resetForm();
     }
 
-    function searchBill() {
-        const num = prompt("Enter Bill Number (e.g., 1001):");
-        if(!num) return;
-        const ledger = JSON.parse(localStorage.getItem('monthlyLedger')) || [];
-        const found = ledger.find(r => r.billNo.includes(num));
-        if(found) {
-            alert(`FOUND: ${found.name}\nArea: ${found.area}\nQty: ${found.qty}\nDue: ${found.due}\nQC By: ${found.staff}`);
-        } else {
-            alert("Bill not found in local records.");
-        }
+    async function searchBill() {
+        const query = prompt("Search (Name, Area, or Bill No):");
+        if(!query) return;
+        try {
+            const res = await fetch(`${FIREBASE_URL}.json`);
+            const data = await res.json();
+            let matches = [];
+            const q = query.toLowerCase();
+            for(let id in data) {
+                const e = data[id];
+                const searchString = `${e.name} ${e.billNo} ${e.area} ${e.staff} ${e.billDate}`.toLowerCase();
+                if(searchString.includes(q)) matches.push(e);
+            }
+
+            if(matches.length === 1) {
+                fillFields(matches[0]);
+            } else if(matches.length > 1) {
+                let list = `Found ${matches.length} results. Type Bill No to load:\n\n`;
+                matches.forEach(m => {
+                    list += `• ${m.billNo} | ${m.billDate} | ${m.name}\n`;
+                });
+                const pick = prompt(list);
+                const selected = matches.find(m => m.billNo.toLowerCase() === pick?.toLowerCase());
+                if(selected) fillFields(selected);
+            } else {
+                alert("No record found.");
+            }
+        } catch(e) { alert("Search Error."); }
+    }
+
+    function fillFields(data) {
+        document.getElementById('dDate').value = data.dispatch;
+        document.getElementById('bDate').value = data.billDate;
+        document.getElementById('bNo').value = data.billNo;
+        document.getElementById('qty').value = data.qty;
+        document.getElementById('cName').value = data.name;
+        document.getElementById('area').value = data.area;
+        document.getElementById('due').value = data.due;
+        document.getElementById('amt').value = data.amt;
+        document.getElementById('qcCheckedBy').value = data.staff;
+        toggleAmt();
+        setMode(true);
     }
 
     function resetMonthlyData() {
-        if(confirm("DELETE ALL LOCAL DATA? This resets bill numbering to 1001.")) {
-            if(confirm("Are you REALLY sure?")) {
-                localStorage.clear();
-                location.reload();
-            }
+        if(confirm("Clear local monthly counter? (Online database will NOT be affected)")) { 
+            localStorage.clear(); 
+            location.reload(); 
         }
     }
 
     window.onload = init;
 </script>
-
 </body>
 </html>
